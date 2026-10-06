@@ -1,12 +1,16 @@
 name = "cf-blog-discord-worker"
-type = "webpack"
-account_id = "fc08588692d3f34a216a433e6d49611f"
+main = "index.js"
+account_id = "0cee8561e3989abcad569632b8652767"
 workers_dev = true
 compatibility_date = "2021-10-04"
 
 kv_namespaces = [
-    { binding = "KV", id = "38f4712cf71547198872a84312a44c92" }
+    { binding = "KV", id = "a9216137f5454043833781f64f0d277d" }
 ]
 
 [triggers]
 crons = ["* * * * *"]
+
+[observability]
+enabled = true
+head_sampling_rate = 1
