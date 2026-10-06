@@ -19,7 +19,7 @@ addEventListener('scheduled', event => {
  */
 async function handleRequest(event) {
   // User-Agent, or we'll be hit with the are you human check
-  const response = await fetch('https://blog.cloudflare.com/rss', {
+  const response = await fetch('https://blog.cloudflare.com/rss-media', {
       headers: { 'User-Agent': Config.userAgent }
   });
 
@@ -122,10 +122,15 @@ async function sendMessage(post) {
     })
   });
 
+  if (!res.ok) {
+    console.error(`Failed to ${update ? 'update' : 'create'} message for post: ${post.title}\n{${await res.text()}}`)
+    return null;
+  }
+
   if(!update) {
     const msg = await res.json();
 
-    await fetch(`https://discord.com/api/v9/channels/${CHANNEL_ID}/messages/${msg.id}/threads`, {
+    const threadRes = await fetch(`https://discord.com/api/v9/channels/${CHANNEL_ID}/messages/${msg.id}/threads`, {
       method: 'POST',
       headers: {
         'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
