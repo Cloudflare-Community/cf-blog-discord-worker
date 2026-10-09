@@ -1,6 +1,6 @@
-import { parseFeed } from 'htmlparser2';
-
 const Config = require('./config.json')
+
+const LAST_MODIFIED_KEY = Config.kvPrefix + 'feed:lastModified'
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request)
@@ -19,31 +19,107 @@ addEventListener('scheduled', event => {
  */
 async function handleRequest(event) {
   // User-Agent, or we'll be hit with the are you human check
-  const response = await fetch('https://blog.cloudflare.com/rss-media', {
-      headers: { 'User-Agent': Config.userAgent }
-  });
+  const headers = { 'User-Agent': Config.userAgent }
+  const lastModified = await KV.get(LAST_MODIFIED_KEY)
+  if (lastModified) headers['If-Modified-Since'] = lastModified
+
+  const response = await fetch('https://blog.cloudflare.com/rss-media', { headers });
+
+  // Feed unchanged, so skip downloading and parsing it to stay within the free plan CPU limit
+  if (response.status === 304) return new Response('Not Modified');
+  if (!response.ok) throw new Error(`Failed to fetch feed: ${response.status}`);
 
   const xml = await response.text();
   // Reverse so old ones are posted first (catch up)
-  const posts = parseFeed(xml).items.reverse();
+  const posts = parseItems(xml).reverse();
 
-  await Promise.all(posts.map(async post => {
-    post.image = post.media[0].url;
-    delete post.media;
-
+  const results = await Promise.all(posts.map(async post => {
     const kv = await KV.get(Config.kvPrefix + post.id)
-    if(kv === null) await createNew(post)
-    else await createUpdate(kv, post)
+    if(kv === null) return createNew(post)
+    return createUpdate(kv, post)
   }));
 
+  // Only remember the feed version once every post went through, so failures are retried next run
+  const newLastModified = response.headers.get('Last-Modified')
+  if (newLastModified && results.every(Boolean)) {
+    await KV.put(LAST_MODIFIED_KEY, newLastModified)
+  }
+
   return new Response('OK');
+}
+
+/**
+ * Extract only the fields we need, skipping content:encoded which is most of the feed
+ * @param xml
+ * @returns {Array<Object>}
+ */
+function parseItems(xml) {
+  const items = []
+  let start = xml.indexOf('<item>')
+
+  while (start !== -1) {
+    const end = xml.indexOf('</item>', start)
+    if (end === -1) break
+
+    let item = xml.slice(start, end)
+
+    const contentStart = item.indexOf('<content:encoded>')
+    const contentEnd = item.indexOf('</content:encoded>', contentStart)
+    if (contentStart !== -1 && contentEnd !== -1) {
+      item = item.slice(0, contentStart) + item.slice(contentEnd)
+    }
+
+    const media = item.match(/<media:content[^>]*\burl="([^"]*)"/)
+    const post = {
+      id: getTag(item, 'guid'),
+      title: getTag(item, 'title'),
+      link: getTag(item, 'link'),
+      description: getTag(item, 'description'),
+      pubDate: new Date(getTag(item, 'pubDate')),
+      image: media ? decodeEntities(media[1]) : undefined
+    }
+
+    // Fail loudly if the feed format changes, rather than posting or caching bad data
+    if (!post.id || !post.title || !post.link || isNaN(post.pubDate.getTime())) {
+      throw new Error(`Unexpected feed item format: ${item.slice(0, 500)}`)
+    }
+
+    items.push(post)
+    start = xml.indexOf('<item>', end)
+  }
+
+  if (items.length === 0) throw new Error('No items found in feed')
+
+  return items
+}
+
+function getTag(xml, tag) {
+  const match = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`))
+  if (!match) return undefined
+
+  const cdata = match[1].match(/^\s*<!\[CDATA\[([\s\S]*)\]\]>\s*$/)
+  if (cdata) return cdata[1].trim()
+  return decodeEntities(match[1].trim())
+}
+
+function decodeEntities(text) {
+  return text.replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (entity, code) => {
+    const lower = code.toLowerCase()
+    if (lower === 'amp') return '&'
+    if (lower === 'lt') return '<'
+    if (lower === 'gt') return '>'
+    if (lower === 'quot') return '"'
+    if (lower === 'apos') return "'"
+    if (lower[1] === 'x') return String.fromCodePoint(parseInt(lower.slice(2), 16))
+    return String.fromCodePoint(parseInt(lower.slice(1), 10))
+  })
 }
 
 
 /**
  * New Blog Post
  * @param post
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} false if the post failed and should be retried
  */
 async function createNew(post) {
   // Date properties
@@ -56,17 +132,18 @@ async function createNew(post) {
     post.messageId = await sendMessage(post);
 
     // dont save to KV if it failed
-    if (post.messageId) {
-      await KV.put(Config.kvPrefix + post.id, JSON.stringify(post))
-    }
+    if (!post.messageId) return false
+    await KV.put(Config.kvPrefix + post.id, JSON.stringify(post))
   }
+
+  return true
 }
 
 /**
  * Updated Blog Post
  * @param kv
  * @param post
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>}
  */
 async function createUpdate(kv, post) {
   const cachedData = JSON.parse(kv)
@@ -86,6 +163,8 @@ async function createUpdate(kv, post) {
     post.hasUpdate = true
     await sendMessage(post)
   }
+
+  return true
 }
 
 async function sendMessage(post) {
