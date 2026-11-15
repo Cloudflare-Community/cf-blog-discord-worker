@@ -11,15 +11,17 @@ And thank you @Erisa for input on the readme
 
 ---
 ### How to set up
-All you need to do is click the "Deploy with Workers" button, then follow the steps until you get to **Fork repo**\
-Once you're on this step, there is a few things you need to change before you continue. First off, fork the repo, then do the following:
 
-- Update the `config.json` file with your desired settings, including the `channelId` for the Discord channel you want to post in.
-- Add a GitHub repo secret for `DISCORD_BOT_TOKEN`
-- Create a new KV namespace and update the KV namespace id in `wrangler.toml` to match the one you just created.
+There are a few steps to the setup, but it should hopefully be pretty straightforward:
 
-__Github Repo Secrets location__\
-`https://github.com/{username}/{repo}/settings/secrets/actions`
+1. Clone the repo
+2. Edit `config.json` with your desired settings, including the `channelId` for the Discord channel you want to post in.
+3. Authenticate Wrangler with `npx wrangler login`, or set the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables (or put them in `.env`)
+4. Put your account ID in `wrangler.toml` (you can get this from `npx wrangler whoami`)
+5. Create the KV namespace with `npx wrangler kv:namespace create KV`
+6. Put the namespace ID in `wrangler.toml`
+7. Add a Discord bot token with `npx wrangler secret put DISCORD_BOT_TOKEN`
+8. Run `npx wrangler deploy` :)
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/PhaxeNor/cf-blog-discord-worker)
 
