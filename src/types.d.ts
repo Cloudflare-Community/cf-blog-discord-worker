@@ -3,16 +3,26 @@ interface Env {
   DISCORD_TOKEN: string;
 }
 
-type FeedItem = NonNullable<
-  ReturnType<typeof import("htmlparser2").parseFeed>
->["items"][number];
+interface ParsedItem {
+  guid: string | { "#text": string };
+  title: string | { "#text": string };
+  link: string | { "#text": string };
+  description: string | { "#text": string };
+  pubDate: string | { "#text": string };
+  "media:content"?: Array<{ url: string }>;
+}
 
-type BlogPost = Omit<FeedItem, "media" | "id" | "pubDate"> & {
+interface BlogPost {
   id: string;
+  title: string;
+  link: string;
+  description: string;
   pubDate: Date;
   image?: string;
   messageId?: string;
   hasUpdate?: boolean;
-};
+}
 
-type CachedBlogPost = Omit<BlogPost, "pubDate"> & { pubDate: string };
+interface CachedBlogPost extends Omit<BlogPost, "pubDate"> {
+  pubDate: string;
+}

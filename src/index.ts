@@ -1,5 +1,53 @@
-import { parseFeed } from "htmlparser2";
+import { XMLParser } from "fast-xml-parser";
 import config from "./config";
+
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "",
+  parseTagValue: false,
+  htmlEntities: true,
+  isArray: (name: string) => name === "item" || name === "media:content",
+});
+
+const LAST_MODIFIED_KEY = config.KV_PREFIX + "feed:lastModified";
+
+function getText(value: unknown): string | undefined {
+  if (value !== null && typeof value === "object" && "#text" in value) {
+    return (value as Record<string, string>)["#text"];
+  }
+  return value as string | undefined;
+}
+
+function parseItems(xml: string): BlogPost[] {
+  const feed = parser.parse(xml) as {
+    rss?: { channel?: { item?: ParsedItem[] } };
+  };
+  const items = feed.rss?.channel?.item ?? [];
+  if (items.length === 0) throw new Error("No items found in feed");
+
+  return items.map((item) => {
+    const post: BlogPost = {
+      id: getText(item.guid) || "",
+      title: getText(item.title) || "",
+      link: getText(item.link) || "",
+      description: getText(item.description) || "",
+      pubDate: new Date(getText(item.pubDate) || ""),
+      image: item["media:content"]?.[0]?.url,
+    };
+
+    // Fail loudly if the feed format changes, rather than posting or caching bad data
+    if (
+      !post.id ||
+      !post.title ||
+      !post.link ||
+      isNaN(post.pubDate.getTime())
+    ) {
+      throw new Error(`Unexpected feed item format: ${JSON.stringify(post)}`);
+    }
+
+    return post;
+  });
+}
 
 export default {
   async fetch(_: Request, env: Env) {
@@ -19,52 +67,55 @@ export default {
 
   async handleRequest(env: Env) {
     // User-Agent, or we'll be hit with the are you human check
+    const headers: Record<string, string> = {
+      "User-Agent": config.USER_AGENT,
+    };
+    const lastModified = await env.KV.get(LAST_MODIFIED_KEY);
+    if (lastModified) headers["If-Modified-Since"] = lastModified;
+
     const response = await fetch("https://blog.cloudflare.com/rss-media", {
-      headers: { "User-Agent": config.USER_AGENT },
+      headers,
     });
+
+    // Feed unchanged, so skip downloading and parsing it to stay within the free plan CPU limit
+    if (response.status === 304) return;
+    if (!response.ok) throw new Error(`Failed to fetch feed: ${response.status}`);
 
     const xml = await response.text();
     // Reverse so old ones are posted first (catch up)
-    const feed = parseFeed(xml);
-    if (!feed) throw new Error("Failed to parse blog RSS feed");
-    const posts: BlogPost[] = feed.items.reverse().map(({ media, ...post }) => {
-      if (typeof post.id !== "string" || !(post.pubDate instanceof Date)) {
-        throw new Error("Blog RSS feed item is missing its id or publication date");
-      }
+    const posts = parseItems(xml).reverse();
 
-      return {
-        ...post,
-        id: post.id,
-        pubDate: post.pubDate,
-        image: media[0]?.url,
-      };
-    });
-
-    await Promise.all(
+    const results = await Promise.all(
       posts.map(async (post) => {
         const kv = await env.KV.get(config.KV_PREFIX + post.id);
-        if (kv === null) await this.createNew(post, env);
-        else await this.createUpdate(kv, post, env);
+        if (kv === null) return this.createNew(post, env);
+        return this.createUpdate(kv, post, env);
       }),
     );
+
+    // Only remember the feed version once every post went through, so failures are retried next run
+    const newLastModified = response.headers.get("Last-Modified");
+    if (newLastModified && results.every(Boolean)) {
+      await env.KV.put(LAST_MODIFIED_KEY, newLastModified);
+    }
   },
 
   async createNew(post: BlogPost, env: Env) {
     // Date properties
     const prevDate = new Date();
     prevDate.setDate(prevDate.getDate() - 1);
-    const postDate = new Date(post.pubDate.getTime());
 
     // Only post if the post date is no older than 1 day. (To catch up, and avoid API spam)
-    if (postDate > prevDate) {
+    if (post.pubDate > prevDate) {
       const messageId = await this.sendMessage(post, env);
 
       // dont save to KV if it failed
-      if (typeof messageId === "string") {
-        post.messageId = messageId;
-        await env.KV.put(config.KV_PREFIX + post.id, JSON.stringify(post));
-      }
+      if (!messageId) return false;
+      post.messageId = messageId as string;
+      await env.KV.put(config.KV_PREFIX + post.id, JSON.stringify(post));
     }
+
+    return true;
   },
 
   async createUpdate(kv: string, post: BlogPost, env: Env) {
@@ -84,9 +135,11 @@ export default {
       post.hasUpdate = true;
       await this.sendMessage(post, env);
     }
+
+    return true;
   },
 
-  async sendMessage(post: BlogPost, env: Env): Promise<string | true | null> {
+  async sendMessage(post: BlogPost, env: Env) {
     const messageId = post.messageId;
     const update = post.hasUpdate;
 
