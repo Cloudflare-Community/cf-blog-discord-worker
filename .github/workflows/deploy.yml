@@ -12,8 +12,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: yarn install
-      - run: yarn build
+      - run: npm ci
+      - run: npm run build
       - name: Publish
         uses: cloudflare/wrangler-action@1.3.0
         with:
