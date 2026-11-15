@@ -1,11 +1,6 @@
-/target
-/dist
-**/*.rs.bk
-Cargo.lock
-bin/
-pkg/
-wasm-pack.log
-worker/
 node_modules/
-.env
+.vscode/
 .idea/
+.wrangler/
+.dev.vars
+.env

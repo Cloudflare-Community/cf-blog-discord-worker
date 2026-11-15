@@ -1,12 +1,16 @@
 name = "cf-blog-discord-worker"
-type = "webpack"
-account_id = "fc08588692d3f34a216a433e6d49611f"
 workers_dev = true
+account_id = ""
 compatibility_date = "2021-10-04"
-
-kv_namespaces = [
-    { binding = "KV", id = "38f4712cf71547198872a84312a44c92" }
-]
+main = "src/index.ts"
 
 [triggers]
 crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "KV"
+id = "abc123"
+
+[[previews.kv_namespaces]]
+binding = "KV"
+id = "abc123"
