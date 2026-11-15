@@ -19,7 +19,7 @@ export default {
 
   async handleRequest(env: Env) {
     // User-Agent, or we'll be hit with the are you human check
-    const response = await fetch("https://blog.cloudflare.com/rss", {
+    const response = await fetch("https://blog.cloudflare.com/rss-media", {
       headers: { "User-Agent": config.USER_AGENT },
     });
 
@@ -86,7 +86,7 @@ export default {
     }
   },
 
-  async sendMessage(post: BlogPost, env: Env): Promise<string | true> {
+  async sendMessage(post: BlogPost, env: Env): Promise<string | true | null> {
     const messageId = post.messageId;
     const update = post.hasUpdate;
 
@@ -117,6 +117,13 @@ export default {
         }),
       },
     );
+
+    if (!res.ok) {
+      console.error(
+        `Failed to ${update ? "update" : "create"} message for post: ${post.title}\n${await res.text()}`,
+      );
+      return null;
+    }
 
     if (!update) {
       const msg: unknown = await res.json();
