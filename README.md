@@ -1,16 +1,15 @@
-## Cloudflare Blog to Discord Worker
+# Cloudflare Blog to Discord Worker
+
 This is a simple worker that checks the Cloudflare Blog RSS for new posts and sends them to the specified Discord channel.
 It will then create a thread on the respective messages posted for people to talk
-
-Initially wanted CF Blog post updates on my private discord, to help me keep various feeds in one place without the need for various apps/extensions to stay up to date.
-
-But after reading the Cloudflare Dev Discord and them also wanted something for their server, but with threads, I decided to change it around and support that. Possibly for my own future use too.
 
 Thank you @WalshyDev for the CF Status Worker and inspiration from that.
 And thank you @Erisa for input on the readme
 
----
-### How to set up
+Want to see it in action?\
+We use this in the [Orange Cloud Discord](https://discord.gg/49SE2dgNsm), come check it out!
+
+## How do I set this up?
 
 There are a few steps to the setup, but it should hopefully be pretty straightforward:
 
@@ -23,7 +22,8 @@ There are a few steps to the setup, but it should hopefully be pretty straightfo
 7. Add a Discord bot token with `npx wrangler secret put DISCORD_TOKEN`
 8. Run `npx wrangler deploy` :)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/PhaxeNor/cf-blog-discord-worker)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Cloudflare-Community/cf-blog-discord-worker)
 
-### Example
+## Example
+
 ![Discord Cloudflare Blog Post](https://user-images.githubusercontent.com/323222/136501524-6411edf0-5eac-4ae7-b3aa-405735f6f19e.png)

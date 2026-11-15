@@ -19,7 +19,7 @@ export default Object.freeze<Config>({
   // Worker stuff
   ////////////////////////////////////////
   // User-Agent used for fetching the Cloudflare Blog RSS feed
-  USER_AGENT: 'CF-Blog-Discord-Worker (https://github.com/phaxenor/cf-blog-discord-worker)',
+  USER_AGENT: 'CF-Blog-Discord-Worker (https://github.com/Cloudflare-Community/cf-blog-discord-worker)',
   // Optional prefix for KV keys to avoid collisions with other data
   KV_PREFIX: ''
 });
