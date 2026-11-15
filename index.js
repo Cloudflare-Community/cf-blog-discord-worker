@@ -110,7 +110,7 @@ async function sendMessage(post) {
     }
   })
 
-  const res = await fetch(update ? `https://discord.com/api/v9/channels/${CHANNEL_ID}/messages/${messageId}` : `https://discord.com/api/v9/channels/${CHANNEL_ID}/messages`, {
+  const res = await fetch(update ? `https://discord.com/api/v9/channels/${Config.channelId}/messages/${messageId}` : `https://discord.com/api/v9/channels/${Config.channelId}/messages`, {
     method: update ? 'PATCH' : 'POST',
     headers: {
       'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
@@ -125,7 +125,7 @@ async function sendMessage(post) {
   if(!update) {
     const msg = await res.json();
 
-    await fetch(`https://discord.com/api/v9/channels/${CHANNEL_ID}/messages/${msg.id}/threads`, {
+    await fetch(`https://discord.com/api/v9/channels/${Config.channelId}/messages/${msg.id}/threads`, {
       method: 'POST',
       headers: {
         'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
@@ -140,7 +140,7 @@ async function sendMessage(post) {
 
     // Added mainly for use in the Cloudflare Dev discord
     if(Config.discordCrosspost) {
-      await fetch(`https://discord.com/api/v9/channels/${CHANNEL_ID}/messages/${msg.id}/crosspost`, {
+      await fetch(`https://discord.com/api/v9/channels/${Config.channelId}/messages/${msg.id}/crosspost`, {
         method: 'POST',
         headers: {
           'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,

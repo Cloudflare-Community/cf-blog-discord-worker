@@ -14,9 +14,8 @@ And thank you @Erisa for input on the readme
 All you need to do is click the "Deploy with Workers" button, then follow the steps until you get to **Fork repo**\
 Once you're on this step, there is a few things you need to change before you continue. First off, fork the repo, then do the following:
 
-- Add 2 Github Repo Secrets
-  - `CHANNEL_ID` - The channel you want this to be posted in
-  - `DISCORD_BOT_TOKEN` - Your bot's token
+- Update the `config.json` file with your desired settings, including the `channelId` for the Discord channel you want to post in.
+- Add a GitHub repo secret for `DISCORD_BOT_TOKEN`
 - Create a new KV namespace and update the KV namespace id in `wrangler.toml` to match the one you just created.
 
 __Github Repo Secrets location__\
@@ -31,7 +30,8 @@ Default Config
   "useEmbedThumbnail": false,
   "discordCrosspost": false,
   "userAgent": "CF-Blog-Discord-Worker (https://github.com/phaxenor/cf-blog-discord-worker)",
-  "kvPrefix": ""
+  "kvPrefix": "",
+  "channelId": ""
 }
 ```
 
@@ -42,6 +42,8 @@ Default Config
 `userAgent`: The user agent used when making web requests
 
 `kvPrefix`: Prefix for your key-value namespace, if needed. 
+
+`channelId`: The ID of the Discord channel where messages will be posted.
 
 ### Example
 ![Discord Cloudflare Blog Post](https://user-images.githubusercontent.com/323222/136501524-6411edf0-5eac-4ae7-b3aa-405735f6f19e.png)
