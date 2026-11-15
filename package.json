@@ -1,19 +1,24 @@
 {
-  "name": "cf-blog-discord-worker",
-  "version": "1.0.0",
-  "description": "A Cloudflare Worker to check their blog and post to discord.",
-  "main": "src/index.ts",
-  "type": "module",
-  "scripts": {
-    "dev": "wrangler dev src/index.ts"
-  },
-  "author": "PhaxeNor (@PhaxeNor)",
-  "license": "MIT",
-  "dependencies": {
-    "fast-xml-parser": "^5.12.0"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261115.1",
-    "wrangler": "^4.162.0"
-  }
+	"name": "cf-blog-discord-worker",
+	"version": "1.0.0",
+	"description": "A Cloudflare Worker to check their blog and post to discord.",
+	"license": "MIT",
+	"author": "PhaxeNor (@PhaxeNor)",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"dev": "wrangler dev src/index.ts",
+		"format": "oxfmt",
+		"format:check": "oxfmt --check",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"fast-xml-parser": "^5.12.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20261115.1",
+		"oxfmt": "^0.78.0",
+		"typescript": "^7.0.2",
+		"wrangler": "^4.162.0"
+	}
 }

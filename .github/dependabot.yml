@@ -26,3 +26,17 @@ updates:
         update-types:
           - patch
           - minor
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+    cooldown:
+      default-days: 3
+
+    groups:
+      # Each PR needs `gh actions-lock` rerun before it passes verification, so keep them to one
+      actions:
+        patterns:
+          - "*"
